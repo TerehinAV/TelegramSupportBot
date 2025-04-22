@@ -17,7 +17,7 @@ async def ticket_status(message: Message):
     db.connect(reuse_if_open=True)
 
     ticket = Ticket.select().where(
-        (Ticket.user_id == message.from_user.id) & (Ticket.is_open == True)
+        (Ticket.user_id == message.from_user.id) & (Ticket.is_closed == False)
     ).first()
 
     if not ticket:
@@ -39,7 +39,7 @@ async def cancel_ticket(message: Message):
     db.connect(reuse_if_open=True)
 
     ticket = Ticket.select().where(
-        (Ticket.user_id == message.from_user.id) & (Ticket.is_open == True)
+        (Ticket.user_id == message.from_user.id) & (Ticket.is_closed == False)
     ).first()
 
     if not ticket:
@@ -47,7 +47,7 @@ async def cancel_ticket(message: Message):
         db.close()
         return
 
-    ticket.is_open = False
+    ticket.is_closed = True
     ticket.save()
 
     # уведомим пользователя
@@ -73,7 +73,7 @@ async def handle_user_message(message: Message):
 
     # Пытаемся найти открытый тикет
     ticket = Ticket.select().where(
-        (Ticket.user_id == user_id) & (Ticket.is_open == True)
+        (Ticket.user_id == user_id) & (Ticket.is_closed == False)
     ).first()
 
     # Если тикета нет — создаём новый
@@ -84,7 +84,6 @@ async def handle_user_message(message: Message):
             original_message_id=message.message_id,
             forwarded_message_id=0,  # обновим позже
             created_at=datetime.now(),
-            is_open=True
         )
 
     # 🧼 Удаляем кнопку у предыдущего сообщения в чате поддержки
@@ -111,7 +110,7 @@ async def handle_user_message(message: Message):
         f"📩 Сообщение от @{message.from_user.username or 'без ника'}\n"
         f"#ticket_{ticket.id}\n\n"
         f"{message.text}\n\n"
-        f"ℹ Чтобы ответить пользователю, отправьте сообщение в ответ на это сообщение."
+        f"ℹ️ Чтобы ответить пользователю, отправьте сообщение в ответ на это сообщение."
     )
 
     sent = await message.bot.send_message(
